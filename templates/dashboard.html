@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Deal Hunter — Dashboard</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #0d1117; color: #c9d1d9; margin: 0; padding: 2rem;
+    max-width: 1400px; margin: 0 auto;
+  }
+  h1 { margin: 0 0 0.25rem; font-weight: 600; letter-spacing: -0.02em; }
+  h2 { margin: 2rem 0 1rem; font-weight: 600; font-size: 1.2rem; color: #e6edf3; }
+  .meta { color: #8b949e; margin-bottom: 1rem; font-size: 0.9rem; }
+  .meta a, .meta code {
+    color: #58a6ff; text-decoration: none;
+    background: #161b22; padding: 0.1rem 0.4rem; border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.85rem;
+  }
+  .actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  button, input[type=submit] {
+    background: #238636; color: white; border: 1px solid #2ea043;
+    padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;
+    font-size: 0.9rem; font-weight: 500;
+  }
+  button:hover, input[type=submit]:hover { background: #2ea043; }
+  button.secondary { background: #21262d; border-color: #30363d; color: #c9d1d9; }
+  button.secondary:hover { background: #30363d; }
+  button.danger { background: #da3633; border-color: #f85149; }
+  button.danger:hover { background: #f85149; }
+
+  /* Config table */
+  .config-table {
+    width: 100%; border-collapse: collapse;
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden;
+  }
+  .config-table th, .config-table td {
+    padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #30363d;
+    font-size: 0.9rem;
+  }
+  .config-table th {
+    background: #0d1117; color: #8b949e; font-weight: 600; text-transform: uppercase;
+    font-size: 0.75rem; letter-spacing: 0.05em;
+  }
+  .config-table tr:last-child td { border-bottom: none; }
+  .config-table td.url { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #58a6ff; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .config-table .row-actions { display: flex; gap: 0.4rem; }
+  .config-table .row-actions button { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+  .pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; }
+  .pill.on { background: #1f3a26; color: #56d364; border: 1px solid #2ea043; }
+  .pill.off { background: #3a1f1f; color: #ff7b72; border: 1px solid #f85149; }
+
+  /* Form */
+  form.add-form {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 1rem; margin-top: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 2fr 0.6fr 0.6fr 1.2fr 1.2fr auto;
+    gap: 0.5rem; align-items: end;
+  }
+  form.add-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: #8b949e; }
+  form.add-form input {
+    background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+    padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.9rem;
+    font-family: inherit;
+  }
+  form.add-form input:focus { outline: 2px solid #58a6ff; border-color: #58a6ff; }
+
+  /* Alerts grid */
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .card a { color: #58a6ff; text-decoration: none; font-weight: 600; }
+  .card a:hover { text-decoration: underline; }
+  .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .badge {
+    font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+    background: #21262d; border: 1px solid #30363d;
+  }
+  .badge.buy { background: #1f3a26; border-color: #2ea043; color: #56d364; }
+  .badge.watch { background: #3a311f; border-color: #d29922; color: #e3b341; }
+  .badge.skip { background: #3a1f1f; border-color: #f85149; color: #ff7b72; }
+  .badge.scam { background: #3a1f1f; border-color: #f85149; color: #ff7b72; }
+  .price { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+  .median { color: #8b949e; font-size: 0.85rem; }
+  .summary { font-size: 0.9rem; color: #c9d1d9; line-height: 1.4; }
+  img.thumb { max-width: 100%; max-height: 160px; object-fit: cover; border-radius: 4px; }
+  .empty { color: #8b949e; padding: 4rem 0; text-align: center; font-style: italic; }
+
+  /* Status banner */
+  #status { margin: 0.5rem 0; font-size: 0.85rem; color: #56d364; min-height: 1.2em; }
+</style>
+</head>
+<body>
+  <h1>🎯 Deal Hunter</h1>
+  <div class="meta">
+    JSON API: <code>/api/alerts</code> · <code>/api/offers</code> · <code>/api/stats</code> · <code>/api/categories</code>
+  </div>
+
+  <div class="actions">
+    <button onclick="scanNow()">▶ Skanuj teraz</button>
+    <button class="secondary" onclick="location.reload()">⟳ Odśwież dashboard</button>
+  </div>
+  <div id="status"></div>
+
+  <h2>Konfiguracja — kategorie do monitorowania</h2>
+  <div class="meta">
+    Wklej URL z OLX, zakres cen i opcjonalnie słowa kluczowe — agent przefiltruje wyniki po tytule ogłoszenia.
+    <br>
+    <b>Include</b>: oferta musi zawierać <em>przynajmniej jedno</em> ze słów (oddziel przecinkami). Np. <code>ps5, playstation 5</code> albo <code>rtx 5090</code>.
+    <br>
+    <b>Exclude</b>: pomiń ofertę gdy zawiera <em>którekolwiek</em> z tych słów. Np. <code>uszkodzony, do naprawy, części</code>.
+  </div>
+
+  {% if categories %}
+  <table class="config-table">
+    <thead>
+      <tr>
+        <th>Nazwa</th>
+        <th>URL</th>
+        <th>Min PLN</th>
+        <th>Max PLN</th>
+        <th>Include</th>
+        <th>Exclude</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in categories %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td class="url" title="{{ c.url }}">{{ c.url }}</td>
+        <td>{{ c.min_price_pln|round|int if c.min_price_pln else "—" }}</td>
+        <td>{{ c.max_price_pln|round|int if c.max_price_pln else "—" }}</td>
+        <td>{{ c.include_keywords or "—" }}</td>
+        <td>{{ c.exclude_keywords or "—" }}</td>
+        <td>
+          <span class="pill {{ 'on' if c.enabled else 'off' }}">
+            {{ "ON" if c.enabled else "OFF" }}
+          </span>
+        </td>
+        <td>
+          <div class="row-actions">
+            <button class="secondary" onclick="toggleCat({{ c.id }})">
+              {{ "Wyłącz" if c.enabled else "Włącz" }}
+            </button>
+            <button class="danger" onclick="deleteCat({{ c.id }}, '{{ c.name }}')">Usuń</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">Brak kategorii. Dodaj pierwszą poniżej.</div>
+  {% endif %}
+
+  <form class="add-form" onsubmit="addCat(event)">
+    <label>Nazwa
+      <input type="text" name="name" required placeholder="Laptopy RTX">
+    </label>
+    <label>URL OLX
+      <input type="url" name="url" required placeholder="https://www.olx.pl/...">
+    </label>
+    <label>Min PLN
+      <input type="number" name="min" min="0" step="any" placeholder="500">
+    </label>
+    <label>Max PLN
+      <input type="number" name="max" min="0" step="any" placeholder="10000">
+    </label>
+    <label>Include (musi zawierać)
+      <input type="text" name="include" placeholder="rtx 5090, rtx 4090">
+    </label>
+    <label>Exclude (nie zawiera)
+      <input type="text" name="exclude" placeholder="uszkodzony, do naprawy">
+    </label>
+    <input type="submit" value="+ Dodaj">
+  </form>
+
+  <h2>Ostatnie 20 alertów</h2>
+  {% if alerts %}
+  <div class="grid">
+    {% for a in alerts %}
+    <div class="card">
+      {% if a.image_url and (a.image_url.startswith("http://") or a.image_url.startswith("https://")) %}
+      <img class="thumb" src="{{ a.image_url }}" alt="" loading="lazy">
+      {% endif %}
+      <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+      <div class="price">{{ "%.0f"|format(a.price) }} PLN</div>
+      {% if a.median %}<div class="median">mediana: {{ "%.0f"|format(a.median) }} PLN</div>{% endif %}
+      <div class="badges">
+        <span class="badge">{{ a.platform }}</span>
+        <span class="badge">{{ a.category }}</span>
+        <span class="badge">score {{ a.score }}/10</span>
+        <span class="badge {{ a.action }}">{{ a.action }}</span>
+        {% if a.is_scam_risk %}<span class="badge scam">⚠️ scam risk</span>{% endif %}
+      </div>
+      <div class="summary">{{ a.summary }}</div>
+      <div class="median">{{ a.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Brak alertów. Dodaj kategorię i kliknij „Skanuj teraz".</div>
+  {% endif %}
+
+<script>
+function status(msg, ok=true) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = ok ? '#56d364' : '#ff7b72';
+  if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+}
+
+async function scanNow() {
+  status('Skan w toku…');
+  const r = await fetch('/api/scan-now', { method: 'POST' });
+  if (r.ok) {
+    status('▶ Skan uruchomiony — odśwież za chwilę żeby zobaczyć nowe alerty.');
+  } else {
+    status('Błąd uruchomienia skanu.', false);
+  }
+}
+
+async function addCat(ev) {
+  ev.preventDefault();
+  const f = ev.target;
+  const body = {
+    name: f.name.value.trim(),
+    url: f.url.value.trim(),
+    min_price_pln: f.min.value ? parseFloat(f.min.value) : null,
+    max_price_pln: f.max.value ? parseFloat(f.max.value) : null,
+    include_keywords: f.include.value.trim() || null,
+    exclude_keywords: f.exclude.value.trim() || null,
+    enabled: true,
+  };
+  const r = await fetch('/api/categories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (r.ok) {
+    status('Dodano kategorię. Odświeżam…');
+    setTimeout(() => location.reload(), 600);
+  } else {
+    const err = await r.json().catch(() => ({}));
+    status('Błąd: ' + (err.detail || r.statusText), false);
+  }
+}
+
+async function toggleCat(id) {
+  const r = await fetch(`/api/categories/${id}/toggle`, { method: 'POST' });
+  if (r.ok) location.reload();
+  else status('Błąd przełączania.', false);
+}
+
+async function deleteCat(id, name) {
+  if (!confirm(`Usunąć kategorię "${name}"?`)) return;
+  const r = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+  if (r.ok) location.reload();
+  else status('Błąd usuwania.', false);
+}
+</script>
+</body>
+</html>

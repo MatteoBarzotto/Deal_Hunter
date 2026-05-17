@@ -1,0 +1,55 @@
+# Deal Hunter configuration
+# Reload requires app restart.
+
+# How often the scheduler runs all scans.
+scan_interval_minutes: 15
+
+# Drop offer if price > median * (1 - price_drop_threshold_pct).
+# 0.30 = alert only when price is 30%+ below median.
+price_drop_threshold_pct: 0.15
+
+# Minimum samples in history before price comparison kicks in.
+min_history_samples: 3
+
+# AI score threshold (1-10). Send alert only when >= this value.
+ai_score_threshold: 6
+
+# Fallback model name. Azure deployments override this via AZURE_OPENAI_DEPLOYMENT.
+ai_model: gpt-5-mini
+ai_max_tokens: 1024
+
+# How long an offer stays "new" before we stop alerting on it (deduplication).
+offer_freshness_hours: 24
+
+allegro:
+  # Disabled: Allegro restricts /offers/listing to verified business developers.
+  # The code (device-code OAuth + auto-refresh) is fully wired; flip to `true`
+  # and run `python auth_allegro.py` once if/when you get business-tier access.
+  enabled: false
+  limit_per_scan: 60
+  # Category IDs: https://developer.allegro.pl/tutorials/lista-kategorii-i-parametry-1Mz9MV5DZcr
+  # Find category IDs via API: GET /sale/categories
+  categories:
+    - id: "165"  # Telefony i Akcesoria
+      name: "Smartphones"
+      max_price_pln: 5000
+    - id: "260"  # Konsole i automaty
+      name: "Game consoles"
+      max_price_pln: 3500
+
+olx:
+  enabled: true
+  limit_per_scan: 40
+  # URLs of OLX category listings (sorted by date).
+  # min_price_pln filters out cheap accessories (etui, kable, etc.).
+  categories:
+    - url: "https://www.olx.pl/elektronika/telefony/?search%5Border%5D=created_at:desc"
+      name: "Phones"
+      # min_price_pln filters out etui / kable / folie that pollute the main
+      # phones category (OLX collapsed subcategories — no /smartfony/ anymore).
+      min_price_pln: 200
+      max_price_pln: 5000
+    - url: "https://www.olx.pl/elektronika/gry-konsole/konsole/?search%5Border%5D=created_at:desc"
+      name: "Game consoles"
+      min_price_pln: 200
+      max_price_pln: 3500
