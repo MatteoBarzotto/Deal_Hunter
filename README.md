@@ -2,11 +2,11 @@
 
 # Deal Hunter
 
-### AI marketplace monitor that finds underpriced offers before they disappear.
+### Inteligentny monitor marketplace'ów, który wyszukuje niedoszacowane oferty zanim znikną.
 
-Deal Hunter scans Polish resale platforms, builds category-level price history,
-detects listings below the market median, validates them with Azure OpenAI, and
-sends high-confidence alerts to Discord.
+Deal Hunter skanuje polskie platformy ogłoszeniowe, buduje historię cen dla
+kategorii, wykrywa oferty poniżej mediany rynkowej, ocenia je przez Azure
+OpenAI i wysyła najlepsze okazje na Discorda.
 
 ![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
@@ -16,206 +16,208 @@ sends high-confidence alerts to Discord.
 
 </div>
 
-## The Idea
+## Pomysł
 
-Marketplaces move fast. Good offers are buried under duplicates, accessories,
-scams, broken devices, and noisy search results. Deal Hunter turns that mess
-into an automated decision pipeline:
+Na marketplace'ach dobre oferty znikają szybko. Jednocześnie wyniki wyszukiwania
+są pełne duplikatów, akcesoriów, uszkodzonych urządzeń, podejrzanych ogłoszeń i
+szumu. Deal Hunter zamienia ten chaos w automatyczny pipeline decyzyjny:
 
-1. Scrape fresh offers from configured categories.
-2. Store every price sample in a local database.
-3. Compare new listings against the category median.
-4. Ask an LLM to evaluate deal quality and scam risk.
-5. Send only useful alerts to Discord.
-6. Keep everything inspectable in a FastAPI dashboard.
+1. Pobiera świeże oferty ze skonfigurowanych kategorii.
+2. Zapisuje każdą próbkę ceny w lokalnej bazie.
+3. Porównuje nowe ogłoszenia z medianą ceny w danej kategorii.
+4. Przekazuje podejrzanie tanie oferty do LLM-a.
+5. Ocenia jakość okazji, ryzyko scamu i rekomendowaną akcję.
+6. Wysyła tylko sensowne alerty na Discorda.
+7. Udostępnia wszystko w lokalnym dashboardzie FastAPI.
 
-It is built as a portfolio project, but with production-style concerns:
-deduplication, retries, persisted config, structured AI output, threshold tuning,
-test coverage, and clear operational boundaries.
+Projekt jest portfolio-ready, ale ma rozwiązania typowe dla prawdziwej aplikacji:
+deduplikację, retry, trwałą konfigurację, strukturyzowane odpowiedzi AI,
+regulowane progi, testy i wyraźnie oddzielone moduły.
 
-## Demo Flow
+## Przepływ Demo
 
 ```text
-OLX category URL
+URL kategorii OLX
       |
       v
-Async scraper -> normalized offer -> SQLite history -> median check
-                                                       |
-                                                       v
-                                          Azure OpenAI risk scoring
-                                                       |
-                                                       v
-                                      Discord alert + dashboard record
+Async scraper -> znormalizowana oferta -> historia SQLite -> analiza mediany
+                                                              |
+                                                              v
+                                                 ocena ryzyka przez Azure OpenAI
+                                                              |
+                                                              v
+                                             alert Discord + wpis w dashboardzie
 ```
 
-The local dashboard runs at:
+Dashboard lokalny działa pod adresem:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-From there you can add watched OLX categories, set price ranges, configure
-include/exclude keywords, trigger scans manually, and review recent alerts.
+Z dashboardu można dodawać obserwowane kategorie OLX, ustawiać zakresy cen,
+konfigurować filtry include/exclude, uruchamiać skan ręcznie i przeglądać
+najnowsze alerty.
 
-## Portfolio Highlights
+## Najważniejsze Elementy Portfolio
 
-| Capability | Implementation |
+| Obszar | Implementacja |
 | --- | --- |
 | Async scraping | `httpx`, `BeautifulSoup4`, rate limiting, retry backoff |
-| Marketplace abstraction | shared `BaseScraper` interface and `ScrapedOffer` model |
-| Price intelligence | per-category median calculation using historical samples |
-| AI decision layer | Azure OpenAI Responses API with JSON object output |
-| Scam filtering | model returns scam indicators, score, condition, summary and action |
-| Persistence | SQLAlchemy 2.0 models for offers, price history, alerts and categories |
-| Automation | APScheduler interval job with manual scan endpoint |
-| Dashboard | FastAPI + Jinja2 admin view for categories and alerts |
-| Notifications | Discord webhook rich embeds with offer metadata |
-| Testing | pytest suite with in-memory SQLite and mocked AI client |
+| Abstrakcja marketplace'ów | wspólny `BaseScraper` i model `ScrapedOffer` |
+| Analiza cen | mediana per kategoria liczona z historycznych próbek |
+| Warstwa AI | Azure OpenAI Responses API ze zwrotem JSON |
+| Scam filtering | model zwraca score, sygnały scamu, stan, opis i akcję |
+| Persistence | SQLAlchemy 2.0: oferty, historia cen, alerty, kategorie |
+| Automatyzacja | APScheduler + endpoint ręcznego skanu |
+| Dashboard | FastAPI + Jinja2 do kategorii i alertów |
+| Powiadomienia | Discord webhook z rich embedami |
+| Testy | pytest, in-memory SQLite i mockowany klient AI |
 
-## Features
+## Funkcje
 
-- Scheduled OLX scans from dashboard-managed category URLs.
-- Allegro scraper integration prepared with OAuth2 device-code flow.
-- Configurable price thresholds, sample requirements and alert score.
-- Include/exclude keyword filters for reducing category noise.
-- Duplicate offer protection using `platform + external_id`.
-- AI alert persistence even when a Discord message is not sent.
-- Manual `scan now` endpoint for local testing and demos.
-- JSON API for health, stats, offers, alerts, settings and categories.
-- Local SQLite database with lightweight schema migration for category filters.
-- Rotating logs via `loguru`.
+- Cykliczne skanowanie OLX na podstawie kategorii zarządzanych z dashboardu.
+- Integracja Allegro przygotowana przez OAuth2 device-code flow.
+- Konfigurowalne progi cenowe, minimalna liczba próbek i próg alertów AI.
+- Filtry include/exclude ograniczające szum w szerokich kategoriach.
+- Deduplikacja ofert po `platform + external_id`.
+- Zapisywanie decyzji AI nawet wtedy, gdy alert nie trafia na Discorda.
+- Endpoint `scan now` do ręcznych testów i demo.
+- JSON API dla health, stats, offers, alerts, settings i categories.
+- Lokalna baza SQLite z lekką migracją kolumn filtrów kategorii.
+- Rotujące logi przez `loguru`.
 
-## Architecture
+## Architektura
 
 ```mermaid
 flowchart TD
-    Scheduler["APScheduler interval job"] --> Scrapers["Scrapers: OLX active, Allegro ready"]
-    Scrapers --> OfferModel["ScrapedOffer normalized model"]
+    Scheduler["APScheduler interval job"] --> Scrapers["Scrapery: OLX aktywny, Allegro gotowe"]
+    Scrapers --> OfferModel["ScrapedOffer: znormalizowany model oferty"]
     OfferModel --> Database["SQLite + SQLAlchemy"]
-    Database --> PriceAnalyzer["PriceAnalyzer: median + drop threshold"]
-    PriceAnalyzer -->|potential deal| AiAnalyzer["Azure OpenAI Responses API"]
-    AiAnalyzer --> Alert["Alert stored with full AI JSON"]
-    Alert -->|score passes and no scam risk| Discord["Discord rich embed"]
+    Database --> PriceAnalyzer["PriceAnalyzer: mediana + próg spadku ceny"]
+    PriceAnalyzer -->|potencjalna okazja| AiAnalyzer["Azure OpenAI Responses API"]
+    AiAnalyzer --> Alert["Alert zapisany z pełnym JSON-em AI"]
+    Alert -->|score spełnia próg i brak scam risk| Discord["Discord rich embed"]
     Database --> Api["FastAPI JSON API"]
-    Api --> Dashboard["Jinja dashboard"]
+    Api --> Dashboard["Dashboard Jinja2"]
 ```
 
-## Repository Structure
+## Struktura Repozytorium
 
 ```text
 deal-hunter/
 ├── analyzer/
-│   ├── ai_analyzer.py          # Azure OpenAI scoring and JSON parsing
-│   └── price_analyzer.py       # median-based deal detection
+│   ├── ai_analyzer.py          # ocena ofert przez Azure OpenAI i parsing JSON
+│   └── price_analyzer.py       # wykrywanie okazji na podstawie mediany
 ├── api/
 │   └── routes.py               # dashboard + JSON API
 ├── config/
-│   ├── .env.example            # secret template
-│   ├── __init__.py             # YAML + env config loader
-│   └── settings.yaml           # scan intervals, thresholds, seed categories
+│   ├── .env.example            # szablon sekretów
+│   ├── __init__.py             # loader YAML + env
+│   └── settings.yaml           # interwały, progi, seed kategorii
 ├── database/
-│   ├── db.py                   # engine, sessions, init, lightweight migration
+│   ├── db.py                   # engine, sesje, init, lekka migracja
 │   └── models.py               # Offer, PriceHistory, Alert, WatchCategory
 ├── notifier/
-│   └── discord.py              # Discord rich embeds
+│   └── discord.py              # rich embedy Discorda
 ├── scheduler/
 │   └── jobs.py                 # end-to-end scan pipeline
 ├── scrapers/
-│   ├── allegro.py              # Allegro REST API client
+│   ├── allegro.py              # klient Allegro REST API
 │   ├── allegro_auth.py         # OAuth2 device-code auth + refresh
-│   ├── base.py                 # scraper interface + ScrapedOffer dataclass
-│   └── olx.py                  # OLX scraper and keyword filters
+│   ├── base.py                 # interfejs scrapera + dataclass ScrapedOffer
+│   └── olx.py                  # scraper OLX i filtry keywordów
 ├── templates/
-│   └── dashboard.html          # local dashboard
+│   └── dashboard.html          # lokalny dashboard
 ├── tests/
-│   ├── conftest.py             # in-memory SQLite fixture
+│   ├── conftest.py             # fixture in-memory SQLite
 │   ├── test_ai_analyzer.py
 │   └── test_price_analyzer.py
-├── auth_allegro.py             # one-time Allegro login helper
-├── main.py                     # app entrypoint
+├── auth_allegro.py             # jednorazowa autoryzacja Allegro
+├── main.py                     # entrypoint aplikacji
 ├── requirements.txt
 └── README.md
 ```
 
 ## Tech Stack
 
-| Layer | Tools |
+| Warstwa | Technologie |
 | --- | --- |
 | Runtime | Python 3.12+ |
 | API | FastAPI, Uvicorn |
 | UI | Jinja2, vanilla JavaScript |
 | Scraping | httpx, BeautifulSoup4, tenacity |
-| Database | SQLite, SQLAlchemy 2.0 |
+| Baza danych | SQLite, SQLAlchemy 2.0 |
 | AI | Azure OpenAI, Responses API |
-| Jobs | APScheduler |
-| Config | pydantic-settings, python-dotenv, YAML |
-| Notifications | Discord webhooks |
-| Tests | pytest, pytest-asyncio |
-| Logging | loguru |
+| Joby | APScheduler |
+| Konfiguracja | pydantic-settings, python-dotenv, YAML |
+| Powiadomienia | Discord webhooks |
+| Testy | pytest, pytest-asyncio |
+| Logowanie | loguru |
 
-## How It Works
+## Jak To Działa
 
 ### 1. Scraping
 
-`OlxScraper` reads enabled watch categories from the database, fetches listing
-pages with `httpx`, parses server-rendered HTML with BeautifulSoup, extracts
-real OLX CDN image URLs, applies price bounds and keyword filters, then returns
-normalized `ScrapedOffer` objects.
+`OlxScraper` pobiera aktywne kategorie z bazy danych, odpyta strony listingowe
+przez `httpx`, parsuje server-rendered HTML przez BeautifulSoup, wyciąga realne
+adresy obrazków z OLX CDN, stosuje zakresy cen i filtry keywordów, a następnie
+zwraca znormalizowane obiekty `ScrapedOffer`.
 
 ### 2. Persistence
 
-The scan pipeline inserts only new offers, while every observed price becomes a
-`PriceHistory` sample. This keeps deal detection grounded in local market data
-instead of hard-coded expectations.
+Pipeline zapisuje tylko nowe oferty, ale każda zaobserwowana cena trafia jako
+próbka `PriceHistory`. Dzięki temu wykrywanie okazji opiera się na lokalnych
+danych rynkowych, a nie na sztywnych, ręcznie wpisanych oczekiwaniach.
 
-### 3. Price Analysis
+### 3. Analiza Ceny
 
-`PriceAnalyzer` calculates the category median and flags an offer only when:
+`PriceAnalyzer` liczy medianę dla kategorii i flaguje ofertę tylko wtedy, gdy:
 
 ```text
 price <= median * (1 - price_drop_threshold_pct)
 ```
 
-It also waits for `min_history_samples`, so early scans do not produce random
-alerts from weak data.
+Analyzer czeka też na `min_history_samples`, więc pierwsze skany nie generują
+losowych alertów na podstawie zbyt małej liczby danych.
 
-### 4. AI Review
+### 4. Ocena AI
 
-Flagged offers are sent to Azure OpenAI with a strict JSON contract:
+Oflagowane oferty trafiają do Azure OpenAI ze ścisłym kontraktem JSON:
 
 ```json
 {
   "score": 8,
   "is_scam_risk": false,
   "scam_indicators": [],
-  "condition_assessment": "Good condition based on listing text",
-  "summary_pl": "Short Polish summary for the buyer.",
+  "condition_assessment": "Dobry stan na podstawie treści ogłoszenia",
+  "summary_pl": "Krótka polska rekomendacja dla kupującego.",
   "recommended_action": "buy"
 }
 ```
 
-The app clamps score values, strips occasional markdown fences, rejects invalid
-JSON, stores the raw model response, and only sends Discord alerts when the
-score threshold is met.
+Aplikacja ogranicza score do zakresu 1-10, usuwa ewentualne markdown fences,
+odrzuca niepoprawny JSON, zapisuje surową odpowiedź modelu i wysyła alert na
+Discorda tylko wtedy, gdy wynik spełnia skonfigurowany próg.
 
-### 5. Alerting
+### 5. Alerty
 
-Discord embeds include price, category median, platform, category, AI score,
-recommended action, seller/location context, summary, and listing thumbnail when
-available.
+Discord embed zawiera cenę, medianę kategorii, platformę, kategorię, score AI,
+rekomendowaną akcję, kontekst sprzedawcy/lokalizacji, podsumowanie oraz miniaturę
+oferty, jeśli jest dostępna.
 
 ## Quick Start
 
 ```bash
-git clone <your-repo-url>
-cd deal-hunter
+git clone git@github.com:MatteoBarzotto/Deal_Hunter.git
+cd Deal_Hunter
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp config/.env.example config/.env
 ```
 
-Fill in `config/.env`:
+Uzupełnij `config/.env`:
 
 ```env
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
@@ -224,27 +226,27 @@ AZURE_OPENAI_DEPLOYMENT=gpt-5-mini
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-Run the app:
+Uruchom aplikację:
 
 ```bash
 python main.py
 ```
 
-Open the dashboard:
+Otwórz dashboard:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-Run one scan and exit:
+Uruchom jeden skan i zakończ:
 
 ```bash
 SCAN_ONLY=1 python main.py
 ```
 
-## Configuration
+## Konfiguracja
 
-Main behavior is controlled in `config/settings.yaml`:
+Główne zachowanie aplikacji jest ustawiane w `config/settings.yaml`:
 
 ```yaml
 scan_interval_minutes: 15
@@ -254,91 +256,93 @@ ai_score_threshold: 6
 offer_freshness_hours: 24
 ```
 
-| Setting | Meaning |
+| Ustawienie | Znaczenie |
 | --- | --- |
-| `scan_interval_minutes` | How often the scheduler scans all enabled sources |
-| `price_drop_threshold_pct` | Minimum discount below median before AI review |
-| `min_history_samples` | Required number of price samples before median checks |
-| `ai_score_threshold` | Minimum AI score required for Discord notification |
-| `offer_freshness_hours` | Max age for offers eligible for alerting |
+| `scan_interval_minutes` | Jak często scheduler skanuje aktywne źródła |
+| `price_drop_threshold_pct` | Minimalna różnica względem mediany przed oceną AI |
+| `min_history_samples` | Minimalna liczba próbek przed analizą mediany |
+| `ai_score_threshold` | Minimalny score AI wymagany do alertu Discord |
+| `offer_freshness_hours` | Maksymalny wiek oferty kwalifikującej się do alertu |
 
-On first boot, OLX categories from `settings.yaml` are seeded into the database.
-After that, categories are managed from the dashboard.
+Przy pierwszym starcie kategorie OLX z `settings.yaml` są seedowane do bazy.
+Później kategorie są zarządzane z dashboardu.
 
 ## API
 
-| Method | Endpoint | Description |
+| Metoda | Endpoint | Opis |
 | --- | --- | --- |
 | `GET` | `/api/health` | Health check |
-| `GET` | `/api/settings` | Effective app settings |
-| `GET` | `/api/stats` | Offer, alert and price sample counts |
-| `GET` | `/api/offers` | Recent scraped offers |
-| `GET` | `/api/alerts` | Recent AI alerts with offer data |
-| `GET` | `/api/categories` | Watched categories |
-| `POST` | `/api/categories` | Create category |
-| `POST` | `/api/categories/{id}` | Update category |
-| `POST` | `/api/categories/{id}/toggle` | Enable or disable category |
-| `DELETE` | `/api/categories/{id}` | Delete category |
-| `GET` | `/api/categories/{id}/preview` | Preview keyword filter behavior |
-| `POST` | `/api/scan-now` | Trigger scan in the background |
+| `GET` | `/api/settings` | Aktualne ustawienia aplikacji |
+| `GET` | `/api/stats` | Liczba ofert, alertów i próbek cen |
+| `GET` | `/api/offers` | Najnowsze zescrapowane oferty |
+| `GET` | `/api/alerts` | Najnowsze alerty AI wraz z ofertami |
+| `GET` | `/api/categories` | Obserwowane kategorie |
+| `POST` | `/api/categories` | Utworzenie kategorii |
+| `POST` | `/api/categories/{id}` | Aktualizacja kategorii |
+| `POST` | `/api/categories/{id}/toggle` | Włączenie lub wyłączenie kategorii |
+| `DELETE` | `/api/categories/{id}` | Usunięcie kategorii |
+| `GET` | `/api/categories/{id}/preview` | Podgląd działania filtrów keywordów |
+| `POST` | `/api/scan-now` | Uruchomienie skanu w tle |
 
-Example:
+Przykład:
 
 ```bash
 curl http://127.0.0.1:8000/api/stats
 ```
 
-## Allegro Support
+## Wsparcie Allegro
 
-Allegro support is implemented but disabled by default because access to
-`/offers/listing` can depend on application type and account verification.
+Integracja Allegro jest zaimplementowana, ale domyślnie wyłączona, ponieważ
+dostęp do `/offers/listing` może zależeć od typu aplikacji i poziomu weryfikacji
+konta.
 
-Authorize once:
+Jednorazowa autoryzacja:
 
 ```bash
 python auth_allegro.py
 ```
 
-Then enable it in `config/settings.yaml`:
+Następnie włącz Allegro w `config/settings.yaml`:
 
 ```yaml
 allegro:
   enabled: true
 ```
 
-Tokens are stored locally in `config/allegro_tokens.json` and automatically
-refreshed when needed.
+Tokeny są przechowywane lokalnie w `config/allegro_tokens.json` i odświeżane
+automatycznie, gdy jest taka potrzeba.
 
-## Tests
+## Testy
 
 ```bash
 pytest
 ```
 
-Covered behavior:
+Pokryte zachowania:
 
-- median calculation per category,
-- insufficient-history handling,
-- threshold-based deal detection,
-- zero and negative price rejection,
-- AI JSON parsing,
-- markdown fence cleanup,
-- score clamping,
-- invalid AI response handling.
+- liczenie mediany per kategoria,
+- obsługa zbyt małej liczby próbek,
+- wykrywanie okazji na podstawie progu,
+- odrzucanie cen zerowych i ujemnych,
+- parsowanie JSON-a z AI,
+- usuwanie markdown fences,
+- ograniczanie score do zakresu,
+- obsługa niepoprawnej odpowiedzi AI.
 
-AI tests use a mocked Azure OpenAI client, so the test suite never calls the
-real API.
+Testy AI korzystają z mockowanego klienta Azure OpenAI, więc test suite nigdy
+nie odpytuje prawdziwego API.
 
-## Responsible Use
+## Odpowiedzialne Użycie
 
-This project is intended for educational and portfolio purposes. Use it locally,
-respect marketplace Terms of Service and `robots.txt`, avoid excessive request
-rates, do not bypass access controls, and prefer official APIs where available.
-Do not publish, resell, or redistribute scraped marketplace data.
+Projekt jest przeznaczony do celów edukacyjnych i portfolio. Używaj go lokalnie,
+respektuj regulaminy marketplace'ów i `robots.txt`, unikaj nadmiernej liczby
+requestów, nie omijaj mechanizmów kontroli dostępu i preferuj oficjalne API tam,
+gdzie jest dostępne. Nie publikuj, nie sprzedawaj i nie redystrybuuj danych
+pozyskanych z marketplace'ów.
 
-## Security
+## Bezpieczeństwo
 
-The repository ignores local runtime and secret files:
+Repozytorium ignoruje lokalne sekrety i artefakty runtime:
 
 ```text
 config/.env
@@ -350,38 +354,40 @@ __pycache__/
 .pytest_cache/
 ```
 
-Before publishing publicly, verify:
+Przed publicznym pushem warto sprawdzić:
 
 ```bash
 git status --short
 ```
 
-## Engineering Decisions
+## Decyzje Inżynierskie
 
-- **Median over average**: marketplace prices contain extreme outliers.
-- **SQLite first**: simple local setup, easy portfolio demo, low operational
-  overhead.
-- **Dashboard-managed watchlist**: category tuning does not require editing code.
-- **Structured model output**: the AI layer is parsed and validated instead of
-  treated as free text.
-- **Persist before notify**: every decision is auditable even if Discord is down
-  or the alert is below threshold.
-- **Small composable modules**: scraper, analyzer, notifier, API and scheduler
-  can evolve independently.
+- **Mediana zamiast średniej**: ceny na marketplace'ach mają dużo skrajnych
+  outlierów.
+- **SQLite first**: proste lokalne uruchomienie, dobre demo portfolio i mały
+  koszt operacyjny.
+- **Watchlist zarządzany z dashboardu**: strojenie kategorii nie wymaga edycji
+  kodu.
+- **Strukturyzowany output modelu**: warstwa AI jest parsowana i walidowana, a
+  nie traktowana jak luźny tekst.
+- **Persist before notify**: każda decyzja jest audytowalna nawet wtedy, gdy
+  Discord nie działa albo alert jest poniżej progu.
+- **Małe moduły**: scraper, analyzer, notifier, API i scheduler mogą rozwijać
+  się niezależnie.
 
 ## Roadmap
 
-- Price history charts in the dashboard.
-- Pagination and filtering for alerts and offers.
-- Telegram notifier.
-- Docker and docker-compose setup.
-- Postgres deployment profile.
-- CI pipeline for tests and linting.
-- More robust outlier handling using percentile bands.
-- Playwright mode for JavaScript-heavy marketplaces.
+- Wykresy historii cen w dashboardzie.
+- Paginacja i filtrowanie alertów oraz ofert.
+- Notifier Telegram.
+- Docker i docker-compose.
+- Profil deploymentu na Postgres.
+- CI pipeline dla testów i lintingu.
+- Lepsze wykrywanie outlierów przez percentile bands.
+- Tryb Playwright dla marketplace'ów mocno opartych o JavaScript.
 
 ## Disclaimer
 
-Deal Hunter is a decision-support tool, not a guarantee that an offer is safe or
-profitable. Always verify the seller, platform rules, payment method and listing
-details before buying.
+Deal Hunter jest narzędziem wspierającym decyzję, a nie gwarancją, że oferta jest
+bezpieczna lub opłacalna. Przed zakupem zawsze zweryfikuj sprzedawcę, regulamin
+platformy, metodę płatności i szczegóły ogłoszenia.
